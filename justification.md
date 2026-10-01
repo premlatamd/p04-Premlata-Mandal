@@ -28,6 +28,8 @@ High-cardinality categorical column (>30 categories):
 
 - PULocationID (259 categories)
 
+  
+
 License:
 
 - NYC TLC Open Data
@@ -98,3 +100,172 @@ This column is a timestamp with very high cardinality. Instead of using the raw 
 
 ## tpep_dropoff_datetime
 This column is also a timestamp with high cardinality. Trip duration will be calculated using pickup and dropoff times, and additional temporal features will be extracted.
+
+
+# R3 - Missing Data Analysis
+
+The dataset contains five columns with missing values:
+
+- passenger_count
+- RatecodeID
+- store_and_fwd_flag
+- congestion_surcharge
+- Airport_fee
+
+Each of these columns has approximately 30.1% missing values.
+
+To investigate the missingness mechanism, the mean values of several observed variables were compared between rows with missing values and rows without missing values.
+
+Rows with missing values had:
+
+- Mean trip_distance = 12.97 miles
+- Mean fare_amount = 27.23
+- Mean total_amount = 33.68
+
+Rows without missing values had:
+
+- Mean trip_distance = 3.35 miles
+- Mean fare_amount = 19.24
+- Mean total_amount = 28.58
+
+The differences are substantial. Therefore, the probability of a value being missing appears to depend on other observed variables in the dataset. This suggests a Missing At Random (MAR) mechanism rather than MCAR.
+
+Because the missingness mechanism is MAR, imputation methods that use information from the observed data are appropriate.
+
+---
+
+## passenger_count
+
+Approximately 30.1% of values are missing.
+
+The missing rows have significantly larger trip distances and fare amounts than non-missing rows, indicating that missingness depends on observed trip characteristics. Therefore, the mechanism is classified as MAR.
+
+Median imputation was selected because passenger_count is numerical and contains a limited range of values.
+
+A passenger_count_missing indicator variable was created and retained because the missingness pattern itself may contain useful information.
+
+Before imputation:
+
+- Mean = 1.16
+- Median = 1.00
+- Standard Deviation = 0.54
+
+---
+
+## RatecodeID
+
+Approximately 30.1% of values are missing.
+
+The missingness pattern follows the same behaviour observed for passenger_count, suggesting a MAR mechanism.
+
+Since RatecodeID represents fare categories, missing values were replaced using the most frequent category.
+
+A RatecodeID_missing indicator variable was created and retained.
+
+Before imputation:
+
+- Mean = 3.97
+- Median = 1.00
+- Standard Deviation = 16.62
+
+---
+
+## store_and_fwd_flag
+
+Approximately 30.1% of values are missing.
+
+The missing rows exhibit different trip characteristics compared to non-missing rows, supporting a MAR assumption.
+
+Since this is a binary categorical variable (Y/N), mode imputation was used.
+
+A store_and_fwd_flag_missing indicator variable was created and retained.
+
+---
+
+## congestion_surcharge
+
+Approximately 30.1% of values are missing.
+
+Missingness appears related to observed trip properties such as trip distance and fare amount. Therefore, the mechanism is considered MAR.
+
+Median imputation was selected because the variable is numerical and highly skewed.
+
+A congestion_surcharge_missing indicator variable was created and retained.
+
+Before imputation:
+
+- Mean = 2.27
+- Median = 2.50
+- Standard Deviation = 0.77
+
+---
+
+## Airport_fee
+
+Approximately 30.1% of values are missing.
+
+The missingness pattern is associated with observed trip characteristics, indicating a MAR mechanism.
+
+Median imputation was used because the variable is numerical and contains a large number of zero values.
+
+An Airport_fee_missing indicator variable was created and retained.
+
+Before imputation:
+
+- Mean = 0.10
+- Median = 0.00
+- Standard Deviation = 0.44
+
+# R4 – Scaling Decisions
+
+### trip_distance
+The trip_distance column has extremely high positive skewness (267.40). The median value is only 1.8 miles, while the maximum value is 328,522.2 miles, indicating the presence of extreme outliers. Therefore, I applied a Log1p transformation followed by RobustScaler. The log transformation reduces the impact of very large values, and RobustScaler is less sensitive to outliers than StandardScaler.
+
+### fare_amount
+The fare_amount column has a skewness of 3.20 and contains extreme values ranging from -2084.1 to 2084.1. These values indicate refunds, corrections, or data anomalies. Therefore, RobustScaler was selected because it scales data using the median and interquartile range, making it suitable for distributions with outliers.
+
+### total_amount
+The total_amount column is positively skewed (2.92) and contains large positive and negative outliers. Since StandardScaler is sensitive to outliers, RobustScaler was chosen to preserve the overall distribution while reducing the influence of extreme values.
+
+### tip_amount
+The tip_amount column has a skewness of 5.81. Most observations are close to zero, but a few very large tips create a long right tail. Therefore, Log1p transformation followed by RobustScaler was applied to reduce skewness and improve scaling.
+
+### tolls_amount
+The tolls_amount column has a skewness of 5.35. Most trips have zero tolls, while a small number of trips have very high toll values. RobustScaler was chosen because it performs better when data contains extreme values.
+
+### passenger_count
+Although passenger_count has a skewness of 4.17, it is a discrete count variable with only a few possible values (0–9). Since it represents the number of passengers rather than a continuous measurement, no scaling was applied.
+
+### VendorID
+VendorID is a categorical identifier representing taxi vendors. Even though its skewness is 4.54, scaling is not appropriate. Instead, One-Hot Encoding will be used.
+
+### payment_type
+payment_type represents payment categories such as credit card and cash. Since it is categorical data, One-Hot Encoding will be used instead of scaling.
+
+### PULocationID and DOLocationID
+These columns are location identifiers rather than continuous numerical measurements. Therefore, they will be encoded as categorical variables instead of being scaled.
+
+### congestion_surcharge, Airport_fee, cbd_congestion_fee, mta_tax and improvement_surcharge
+These columns contain fixed charges with only a small number of unique values. Additional scaling is not necessary because their values are already bounded and interpretable.
+
+### Conclusion
+Not all numerical columns were standardized. Highly skewed columns such as trip_distance, tip_amount, fare_amount and total_amount required RobustScaler or Log1p transformation. Categorical identifiers such as VendorID, payment_type and location IDs were encoded instead of scaled. These decisions were based on the observed skewness, outliers and the meaning of each feature.
+
+# R5 - Encoding Strategy
+
+The dataset contains six categorical features:
+
+- VendorID
+- payment_type
+- RatecodeID
+- store_and_fwd_flag
+- PULocationID
+- DOLocationID
+
+An encoding audit was performed by counting the number of unique categories in each feature.
+
+VendorID, payment_type, RatecodeID and store_and_fwd_flag were identified as low-cardinality categorical variables because they contain fewer than 10 unique categories. These features were encoded using:
+
+```python
+OneHotEncoder(handle_unknown="ignore")<img width="819" height="415" alt="Screenshot 2026-10-02 at 12 20 13 AM" src="https://github.com/user-attachments/assets/daeff8a7-693a-4ab5-a232-d528fc98ba77" />
+
