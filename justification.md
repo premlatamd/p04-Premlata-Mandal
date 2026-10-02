@@ -269,3 +269,25 @@ VendorID, payment_type, RatecodeID and store_and_fwd_flag were identified as low
 ```python
 OneHotEncoder(handle_unknown="ignore")<img width="819" height="415" alt="Screenshot 2026-10-02 at 12 20 13 AM" src="https://github.com/user-attachments/assets/daeff8a7-693a-4ab5-a232-d528fc98ba77" />
 
+```
+
+# R6 - One Pipeline Object
+
+A single Pipeline object was created using Pipeline and ColumnTransformer.
+
+Numerical features were processed through a numerical pipeline containing:
+- SimpleImputer(strategy="median")
+- RobustScaler
+
+Categorical features were processed through a categorical pipeline containing:
+- SimpleImputer(strategy="most_frequent")
+- OneHotEncoder(handle_unknown="ignore")
+
+Both pipelines were combined using ColumnTransformer and connected to a Linear Regression model.
+
+Justification:
+- All preprocessing steps are performed inside the pipeline.
+- Unseen categories are handled using handle_unknown='ignore'.
+- Missing values are handled automatically through SimpleImputer.
+- The same transformations are applied during training, testing, and cross-validation.
+- No preprocessing is fitted outside the pipeline, reducing the risk of data leakage.
