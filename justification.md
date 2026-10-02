@@ -285,9 +285,56 @@ Categorical features were processed through a categorical pipeline containing:
 
 Both pipelines were combined using ColumnTransformer and connected to a Linear Regression model.
 
+# R7
 Justification:
 - All preprocessing steps are performed inside the pipeline.
 - Unseen categories are handled using handle_unknown='ignore'.
 - Missing values are handled automatically through SimpleImputer.
 - The same transformations are applied during training, testing, and cross-validation.
 - No preprocessing is fitted outside the pipeline, reducing the risk of data leakage.
+
+Leakage Score (R²): 0.9819
+Pipeline Score (R²): 0.9839
+Difference: -0.0020
+
+The difference between the two scores was very small. In this dataset, leakage did not noticeably inflate performance. However, the pipeline approach remains the correct practice because preprocessing is learned separately within each fold.
+
+For unseen-category testing, the pipeline successfully produced a prediction (30.97) for categories that were never observed during training. This demonstrates that handle_unknown='ignore' improves robustness and prevents prediction failures in production environments.
+
+# R8 
+
+Leak Experiment:
+
+I compared a correct pipeline against a deliberately broken version where preprocessing was performed outside the pipeline before cross-validation.
+
+Correct Pipeline R² Score = 0.9839
+
+Leakage Version R² Score = 0.9819
+
+Difference = -0.0020
+
+The difference is very small (0.2%), showing that leakage was not severe for this dataset. This is a useful finding because small leakage effects are often difficult to notice in practice. Using the pipeline remains the correct approach because preprocessing is learned separately inside each cross-validation fold.
+
+# R8 Section 5 — What I would do differently
+
+If I had more time and computational resources, I would explore additional feature engineering techniques such as trip duration features, location clustering, and interaction variables.
+
+I would also compare multiple regression models including Random Forest Regressor, XGBoost, and Gradient Boosting Regressor.
+
+Finally, I would investigate advanced missing-value imputation methods and perform hyperparameter tuning using GridSearchCV.
+
+# R8 Section 6 — What breaks this pipeline
+
+This pipeline does not handle completely new numeric distributions that are very different from the training data.
+
+Extremely large trip distances, fare amounts, or corrupted records may reduce prediction quality.
+
+The pipeline also assumes that the input columns exist with the same names and data types as the training dataset.
+
+If important columns are removed, renamed, or contain unexpected formats, the pipeline may fail.
+
+Although unseen categories are handled through OneHotEncoder(handle_unknown="ignore"), performance may still decrease when many new categories appear in production.
+
+# R9
+
+Median imputation achieved the highest average R² score and was therefore selected for the final pipeline. Mean and most-frequent imputation produced similar performance, suggesting that the model is relatively robust to the imputation choice.
